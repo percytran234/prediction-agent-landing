@@ -3,990 +3,808 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prediction Agent — Discipline-as-a-Service for Prediction Markets</title>
-    <meta name="description" content="AI-powered prediction market agent with automated risk management. Don't predict better — manage better.">
+    <title>Prediction Agent — AI-Powered Risk Management for Polymarket</title>
+    <meta name="description" content="Stop losing money on prediction markets. AI agent with automated bet sizing, signal filtering, and hard stop-losses. Start free.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #06070a;
-            --bg-secondary: #0c0e14;
-            --bg-card: #11131a;
-            --bg-card-hover: #161921;
-            --border: #1a1d28;
-            --border-glow: #2a3040;
-            --text-primary: #e8ecf4;
-            --text-secondary: #7a8299;
-            --text-muted: #4a5068;
-            --accent-green: #00e68a;
-            --accent-green-dim: #00e68a33;
-            --accent-red: #ff4d6a;
-            --accent-red-dim: #ff4d6a22;
-            --accent-blue: #4d9fff;
-            --accent-blue-dim: #4d9fff22;
-            --accent-yellow: #ffd84d;
-            --accent-yellow-dim: #ffd84d22;
-            --accent-purple: #a78bfa;
-            --gradient-green: linear-gradient(135deg, #00e68a, #00b368);
-            --gradient-hero: linear-gradient(180deg, #06070a 0%, #0a0f18 50%, #06070a 100%);
-            --font-display: 'Outfit', sans-serif;
-            --font-mono: 'JetBrains Mono', monospace;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        html {
-            scroll-behavior: smooth;
-            scrollbar-width: thin;
-            scrollbar-color: var(--border) var(--bg-primary);
-        }
-
-        body {
-            font-family: var(--font-display);
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            overflow-x: hidden;
-            line-height: 1.6;
-        }
-
-        /* ===== NOISE TEXTURE OVERLAY ===== */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-            pointer-events: none;
-            z-index: 1000;
-        }
-
-        /* ===== GRID BACKGROUND ===== */
-        .grid-bg {
-            position: fixed;
-            inset: 0;
-            background-image:
-                linear-gradient(var(--border) 1px, transparent 1px),
-                linear-gradient(90deg, var(--border) 1px, transparent 1px);
-            background-size: 60px 60px;
-            opacity: 0.15;
-            pointer-events: none;
-        }
-
-        /* ===== NAVIGATION ===== */
-        nav {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 100;
-            padding: 1rem 2rem;
-            backdrop-filter: blur(20px);
-            background: rgba(6,7,10,0.8);
-            border-bottom: 1px solid var(--border);
-            transition: all 0.3s;
-        }
-
-        .nav-inner {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 700;
-            font-size: 1.15rem;
-            letter-spacing: -0.02em;
-        }
-
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--gradient-green);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 400;
-            transition: color 0.2s;
-        }
-
-        .nav-links a:hover { color: var(--text-primary); }
-
-        .nav-cta {
-            padding: 0.5rem 1.25rem;
-            background: var(--accent-green);
-            color: var(--bg-primary);
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .nav-cta:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 20px var(--accent-green-dim);
-        }
-
-        /* ===== HERO ===== */
-        .hero {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            padding: 8rem 2rem 4rem;
-            background: var(--gradient-hero);
-        }
-
-        .hero-glow {
-            position: absolute;
-            top: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, var(--accent-green-dim) 0%, transparent 70%);
-            pointer-events: none;
-            animation: pulse-glow 4s ease-in-out infinite;
-        }
-
-        @keyframes pulse-glow {
-            0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
-            50% { opacity: 0.6; transform: translateX(-50%) scale(1.1); }
-        }
-
-        .hero-content {
-            text-align: center;
-            max-width: 800px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.4rem 1rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 100px;
-            font-size: 0.8rem;
-            color: var(--accent-green);
-            font-family: var(--font-mono);
-            margin-bottom: 2rem;
-            animation: fadeInDown 0.8s ease-out;
-        }
-
-        .badge-dot {
-            width: 6px;
-            height: 6px;
-            background: var(--accent-green);
-            border-radius: 50%;
-            animation: blink 2s ease-in-out infinite;
-        }
-
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
-
-        .hero h1 {
-            font-size: clamp(2.5rem, 6vw, 4.5rem);
-            font-weight: 800;
-            line-height: 1.05;
-            letter-spacing: -0.03em;
-            margin-bottom: 1.5rem;
-            animation: fadeInUp 0.8s ease-out 0.2s both;
-        }
-
-        .hero h1 .gradient-text {
-            background: var(--gradient-green);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero-subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto 2.5rem;
-            font-weight: 300;
-            line-height: 1.7;
-            animation: fadeInUp 0.8s ease-out 0.4s both;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            animation: fadeInUp 0.8s ease-out 0.6s both;
-        }
-
-        .btn-primary {
-            padding: 0.85rem 2rem;
-            background: var(--accent-green);
-            color: var(--bg-primary);
-            border: none;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.25s;
-            font-family: var(--font-display);
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px var(--accent-green-dim);
-        }
-
-        .btn-secondary {
-            padding: 0.85rem 2rem;
-            background: transparent;
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            font-weight: 500;
-            font-size: 1rem;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.25s;
-            font-family: var(--font-display);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--text-secondary);
-            background: var(--bg-card);
-        }
-
-        /* ===== LIVE TICKER ===== */
-        .ticker-section {
-            padding: 2rem 0;
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-            overflow: hidden;
-            background: var(--bg-secondary);
-        }
-
-        .ticker-track {
-            display: flex;
-            gap: 3rem;
-            animation: scroll-left 30s linear infinite;
-            width: max-content;
-        }
-
-        .ticker-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            white-space: nowrap;
-            color: var(--text-secondary);
-        }
-
-        .ticker-item .green { color: var(--accent-green); }
-        .ticker-item .red { color: var(--accent-red); }
-        .ticker-item .yellow { color: var(--accent-yellow); }
-
-        @keyframes scroll-left {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-        }
-
-        /* ===== SECTIONS COMMON ===== */
-        section {
-            padding: 6rem 2rem;
-            position: relative;
-        }
-
-        .section-inner {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        .section-label {
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
-            color: var(--accent-green);
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            margin-bottom: 1rem;
-        }
-
-        .section-title {
-            font-size: clamp(1.8rem, 4vw, 2.8rem);
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            margin-bottom: 1rem;
-            line-height: 1.15;
-        }
-
-        .section-desc {
-            font-size: 1.05rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin-bottom: 3rem;
-            font-weight: 300;
-        }
-
-        /* ===== PROBLEM SECTION ===== */
-        .problem-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .problem-card {
-            padding: 2rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            transition: all 0.3s;
-            opacity: 0;
-            transform: translateY(30px);
-        }
-
-        .problem-card.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .problem-card:hover {
-            border-color: var(--accent-red);
-            background: var(--bg-card-hover);
-            transform: translateY(-4px);
-        }
-
-        .problem-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-
-        .problem-card h3 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .problem-card p {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            line-height: 1.6;
-        }
-
-        .problem-stat {
-            display: inline-block;
-            margin-top: 1rem;
-            padding: 0.3rem 0.75rem;
-            background: var(--accent-red-dim);
-            color: var(--accent-red);
-            border-radius: 6px;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-
-        /* ===== HOW IT WORKS ===== */
-        .steps-container {
-            display: flex;
-            flex-direction: column;
-            gap: 0;
-            position: relative;
-        }
-
-        .steps-container::before {
-            content: '';
-            position: absolute;
-            left: 24px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: linear-gradient(to bottom, var(--accent-green), var(--accent-blue), var(--accent-purple));
-            opacity: 0.3;
-        }
-
-        .step {
-            display: flex;
-            gap: 2rem;
-            padding: 2rem 0;
-            opacity: 0;
-            transform: translateX(-20px);
-            transition: all 0.6s ease-out;
-        }
-
-        .step.visible {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .step-number {
-            width: 50px;
-            height: 50px;
-            min-width: 50px;
-            background: var(--bg-card);
-            border: 2px solid var(--accent-green);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: var(--font-mono);
-            font-weight: 700;
-            font-size: 1rem;
-            color: var(--accent-green);
-            position: relative;
-            z-index: 2;
-        }
-
-        .step-content h3 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .step-content p {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
-
-        .step-code {
-            margin-top: 1rem;
-            padding: 1rem 1.25rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--accent-green);
-            overflow-x: auto;
-        }
-
-        /* ===== STRATEGY SECTION ===== */
-        .strategy-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1.5rem;
-        }
-
-        .strategy-card {
-            padding: 2rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            text-align: center;
-            transition: all 0.3s;
-            opacity: 0;
-            transform: scale(0.95);
-        }
-
-        .strategy-card.visible {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        .strategy-card:hover {
-            border-color: var(--accent-green);
-            transform: translateY(-4px);
-        }
-
-        .strategy-number {
-            font-family: var(--font-mono);
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--accent-green);
-            line-height: 1;
-            margin-bottom: 0.75rem;
-        }
-
-        .strategy-card h3 {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .strategy-card p {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        /* ===== SCENARIOS ===== */
-        .scenario-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 2rem;
-            font-size: 0.9rem;
-        }
-
-        .scenario-table th {
-            text-align: left;
-            padding: 1rem 1.25rem;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .scenario-table td {
-            padding: 1rem 1.25rem;
-            border: 1px solid var(--border);
-            background: var(--bg-secondary);
-        }
-
-        .scenario-table tr:hover td {
-            background: var(--bg-card);
-        }
-
-        /* ===== DISCLAIMER BANNER ===== */
-        .disclaimer-section {
-            padding: 3rem 2rem;
-            background: var(--accent-yellow-dim);
-            border-top: 1px solid rgba(255,216,77,0.15);
-            border-bottom: 1px solid rgba(255,216,77,0.15);
-        }
-
-        .disclaimer-inner {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: center;
-        }
-
-        .disclaimer-inner h3 {
-            color: var(--accent-yellow);
-            font-size: 1rem;
-            margin-bottom: 0.75rem;
-            font-family: var(--font-mono);
-        }
-
-        .disclaimer-inner p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            line-height: 1.7;
-        }
-
-        /* ===== CTA SECTION ===== */
-        .cta-section {
-            padding: 8rem 2rem;
-            text-align: center;
-            position: relative;
-        }
-
-        .cta-glow {
-            position: absolute;
-            bottom: 20%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, var(--accent-green-dim) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        .cta-section h2 {
-            font-size: clamp(2rem, 4vw, 3rem);
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            margin-bottom: 1rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        .cta-section p {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            margin-bottom: 2.5rem;
-            position: relative;
-            z-index: 2;
-        }
-
-        /* ===== FOOTER ===== */
-        footer {
-            padding: 3rem 2rem;
-            border-top: 1px solid var(--border);
-            text-align: center;
-        }
-
-        .footer-inner {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        .footer-links {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            margin-bottom: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        .footer-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: color 0.2s;
-        }
-
-        .footer-links a:hover { color: var(--text-primary); }
-
-        .footer-copy {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-        }
-
-        /* ===== ANIMATIONS ===== */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ===== RESPONSIVE ===== */
-        @media (max-width: 768px) {
-            .nav-links { display: none; }
-            .strategy-grid { grid-template-columns: 1fr; }
-            .problem-grid { grid-template-columns: 1fr; }
-            .hero { padding: 6rem 1.5rem 3rem; }
-            section { padding: 4rem 1.5rem; }
-            .step { gap: 1rem; }
-            .scenario-table { font-size: 0.8rem; }
-            .scenario-table th, .scenario-table td { padding: 0.75rem; }
+            --bg-0: #04060b;
+            --bg-1: #080b13;
+            --bg-2: #0d1019;
+            --bg-card: #101420;
+            --bg-card-h: #141828;
+            --border: #1a1f30;
+            --border-h: #252b40;
+            --tx-1: #eaf0ff;
+            --tx-2: #8892ad;
+            --tx-3: #505a73;
+            --green: #00dc82;
+            --green-bg: rgba(0,220,130,0.08);
+            --green-border: rgba(0,220,130,0.2);
+            --red: #ff5070;
+            --red-bg: rgba(255,80,112,0.08);
+            --blue: #5090ff;
+            --blue-bg: rgba(80,144,255,0.08);
+            --yellow: #ffb830;
+            --yellow-bg: rgba(255,184,48,0.06);
+            --purple: #a480ff;
+            --purple-bg: rgba(164,128,255,0.08);
+            --font: 'Sora', system-ui, sans-serif;
+            --mono: 'DM Mono', 'Menlo', monospace;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+        html{scroll-behavior:smooth}
+        body{font-family:var(--font);background:var(--bg-0);color:var(--tx-1);line-height:1.65;overflow-x:hidden}
+        body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E")}
+        a{color:inherit;text-decoration:none}
+        .container{max-width:1140px;margin:0 auto;padding:0 1.5rem}
+
+        /* NAV */
+        nav{position:fixed;top:0;width:100%;z-index:100;padding:0.8rem 0;backdrop-filter:blur(24px);background:rgba(4,6,11,0.75);border-bottom:1px solid var(--border)}
+        .nav-inner{display:flex;justify-content:space-between;align-items:center;max-width:1140px;margin:0 auto;padding:0 1.5rem}
+        .logo{display:flex;align-items:center;gap:0.6rem;font-weight:700;font-size:1.05rem;letter-spacing:-0.02em}
+        .logo-mark{width:28px;height:28px;background:var(--green);border-radius:7px;display:grid;place-items:center;font-size:0.8rem}
+        .nav-links{display:flex;gap:1.75rem;list-style:none}
+        .nav-links a{font-size:0.82rem;color:var(--tx-2);transition:color 0.2s;font-weight:400}
+        .nav-links a:hover{color:var(--tx-1)}
+        .nav-right{display:flex;gap:0.75rem;align-items:center}
+        .btn-ghost{padding:0.45rem 1rem;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;color:var(--tx-2);transition:all 0.2s;font-family:var(--font);cursor:pointer;background:transparent}
+        .btn-ghost:hover{border-color:var(--tx-2);color:var(--tx-1)}
+        .btn-green{padding:0.5rem 1.15rem;background:var(--green);color:var(--bg-0);border:none;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:var(--font)}
+        .btn-green:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,220,130,0.25)}
+
+        /* HERO */
+        .hero{padding:10rem 0 6rem;text-align:center;position:relative}
+        .hero-glow{position:absolute;top:10%;left:50%;transform:translateX(-50%);width:800px;height:800px;background:radial-gradient(circle,rgba(0,220,130,0.05) 0%,transparent 65%);pointer-events:none}
+        .hero-content{position:relative;z-index:2}
+        .hero-pills{display:flex;justify-content:center;gap:0.5rem;margin-bottom:2.5rem;flex-wrap:wrap}
+        .pill{padding:0.3rem 0.85rem;background:var(--bg-card);border:1px solid var(--border);border-radius:100px;font-size:0.72rem;font-family:var(--mono);color:var(--tx-2);display:inline-flex;align-items:center;gap:0.4rem}
+        .pill .dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+        .hero h1{font-size:clamp(2.8rem,6.5vw,4.8rem);font-weight:800;line-height:1.0;letter-spacing:-0.04em;margin-bottom:1.5rem}
+        .hero h1 em{font-style:normal;color:var(--green)}
+        .hero-sub{font-size:1.15rem;color:var(--tx-2);max-width:560px;margin:0 auto 2.5rem;font-weight:300;line-height:1.7}
+        .hero-actions{display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;margin-bottom:3rem}
+        .btn-big{padding:0.9rem 2.25rem;border-radius:10px;font-size:0.95rem;font-weight:600;cursor:pointer;transition:all 0.25s;font-family:var(--font);display:inline-flex;align-items:center;gap:0.5rem}
+        .btn-big-green{background:var(--green);color:var(--bg-0);border:none}
+        .btn-big-green:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,220,130,0.3)}
+        .btn-big-outline{background:transparent;color:var(--tx-1);border:1px solid var(--border)}
+        .btn-big-outline:hover{border-color:var(--tx-2);background:var(--bg-card)}
+        .social-proof{display:flex;justify-content:center;gap:2.5rem;flex-wrap:wrap}
+        .proof-item{text-align:center}
+        .proof-num{font-size:1.5rem;font-weight:700;color:var(--tx-1);font-family:var(--mono)}
+        .proof-num .g{color:var(--green)}
+        .proof-label{font-size:0.75rem;color:var(--tx-3);margin-top:0.15rem}
+
+        /* TICKER */
+        .ticker{padding:1rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);overflow:hidden;background:var(--bg-1)}
+        .ticker-track{display:flex;gap:2.5rem;animation:scroll 35s linear infinite;width:max-content}
+        .ticker-item{font-family:var(--mono);font-size:0.78rem;white-space:nowrap;color:var(--tx-3);display:flex;align-items:center;gap:0.4rem}
+        @keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+        /* SECTIONS */
+        section{padding:6rem 0;position:relative}
+        .s-label{font-family:var(--mono);font-size:0.7rem;color:var(--green);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.75rem}
+        .s-title{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:700;letter-spacing:-0.03em;margin-bottom:0.75rem;line-height:1.15}
+        .s-desc{font-size:1rem;color:var(--tx-2);max-width:560px;margin-bottom:3rem;font-weight:300}
+
+        /* SCROLL ANIMATIONS */
+        [data-a]{opacity:0;transform:translateY(40px);transition:opacity 0.7s cubic-bezier(0.16,1,0.3,1),transform 0.7s cubic-bezier(0.16,1,0.3,1)}
+        [data-a].v{opacity:1;transform:translateY(0)}
+        [data-a="left"]{transform:translateX(-60px)}
+        [data-a="left"].v{transform:translateX(0)}
+        [data-a="right"]{transform:translateX(60px)}
+        [data-a="right"].v{transform:translateX(0)}
+        [data-a="scale"]{transform:scale(0.9);opacity:0}
+        [data-a="scale"].v{transform:scale(1);opacity:1}
+        [data-a="fade"]{transform:none;opacity:0}
+        [data-a="fade"].v{opacity:1}
+
+        /* APP PREVIEW */
+        .app-preview{padding:4rem 0 6rem;text-align:center}
+        .app-frame{max-width:900px;margin:0 auto;border-radius:16px;border:1px solid var(--border);background:var(--bg-card);overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.5)}
+        .app-topbar{display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1rem;background:var(--bg-2);border-bottom:1px solid var(--border)}
+        .app-dot{width:10px;height:10px;border-radius:50%}
+        .app-body{padding:2rem;display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+        .app-card{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;text-align:left}
+        .app-card-label{font-size:0.7rem;color:var(--tx-3);font-family:var(--mono);margin-bottom:0.35rem}
+        .app-card-value{font-size:1.4rem;font-weight:700;font-family:var(--mono)}
+        .app-card-sub{font-size:0.75rem;margin-top:0.2rem}
+        .app-bets{grid-column:1/-1}
+        .app-bets-title{font-size:0.8rem;color:var(--tx-2);margin-bottom:0.75rem;font-weight:600}
+        .app-bet-row{display:grid;grid-template-columns:80px 60px 70px 80px 1fr;gap:0.5rem;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:0.75rem;font-family:var(--mono);color:var(--tx-2);align-items:center}
+        .app-bet-row:last-child{border-bottom:none}
+        .badge-sm{padding:0.15rem 0.5rem;border-radius:4px;font-size:0.65rem;font-weight:600;display:inline-block}
+        .badge-win{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+        .badge-loss{background:var(--red-bg);color:var(--red);border:1px solid rgba(255,80,112,0.2)}
+        .badge-skip{background:rgba(255,255,255,0.04);color:var(--tx-3);border:1px solid var(--border)}
+
+        /* PROBLEM */
+        .problem-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem}
+        .p-card{padding:1.75rem;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;transition:all 0.3s}
+        .p-card:hover{border-color:var(--red);transform:translateY(-3px)}
+        .p-icon{font-size:1.75rem;margin-bottom:0.75rem}
+        .p-card h3{font-size:1rem;font-weight:600;margin-bottom:0.4rem}
+        .p-card p{font-size:0.85rem;color:var(--tx-2)}
+        .p-stat{display:inline-block;margin-top:0.75rem;padding:0.2rem 0.6rem;background:var(--red-bg);color:var(--red);border-radius:5px;font-family:var(--mono);font-size:0.72rem;font-weight:600}
+
+        /* ===== FEATURES — MEGA SECTION ===== */
+        .features-section{background:var(--bg-1);overflow:hidden}
+        .feature-block{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;padding:4rem 0;border-bottom:1px solid var(--border)}
+        .feature-block:last-child{border-bottom:none}
+        .feature-block.reverse{direction:rtl}
+        .feature-block.reverse > *{direction:ltr}
+        .feature-text{padding:1rem 0}
+        .feature-tag{display:inline-block;padding:0.2rem 0.65rem;border-radius:5px;font-size:0.65rem;font-family:var(--mono);font-weight:600;margin-bottom:1rem}
+        .tag-free{background:var(--green-bg);color:var(--green)}
+        .tag-pro{background:var(--blue-bg);color:var(--blue)}
+        .tag-soon{background:rgba(255,255,255,0.04);color:var(--tx-3)}
+        .feature-text h3{font-size:1.5rem;font-weight:700;margin-bottom:0.6rem;letter-spacing:-0.02em}
+        .feature-text p{color:var(--tx-2);font-size:0.92rem;line-height:1.7;margin-bottom:1rem}
+        .feature-text ul{list-style:none;display:flex;flex-direction:column;gap:0.4rem}
+        .feature-text ul li{font-size:0.85rem;color:var(--tx-2);display:flex;align-items:center;gap:0.5rem}
+        .feature-text ul li::before{content:'✓';color:var(--green);font-weight:700;font-size:0.75rem}
+        .feature-visual{position:relative;display:flex;align-items:center;justify-content:center;min-height:320px}
+
+        /* Feature Visual Cards */
+        .vis-card{background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:1.5rem;width:100%;overflow:hidden;transition:all 0.4s}
+        .vis-card:hover{border-color:var(--green-border);box-shadow:0 0 40px rgba(0,220,130,0.05)}
+        .vis-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+        .vis-card-title{font-size:0.8rem;font-weight:600;color:var(--tx-2)}
+        .vis-card-badge{font-size:0.7rem;font-family:var(--mono);padding:0.15rem 0.5rem;border-radius:4px}
+
+        /* SVG Charts */
+        .chart-svg{width:100%;display:block}
+        .chart-line{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+        .chart-area{opacity:0.15}
+        .chart-grid-line{stroke:var(--border);stroke-width:0.5}
+        .chart-dot{transition:r 0.2s}
+        .vis-card:hover .chart-dot{r:4}
+
+        /* Animated draw */
+        .draw-line{stroke-dasharray:800;stroke-dashoffset:800;transition:stroke-dashoffset 2s cubic-bezier(0.16,1,0.3,1)}
+        .v .draw-line,.vis-card:hover .draw-line{stroke-dashoffset:0}
+
+        /* Candlestick chart */
+        .candle-body{transition:all 0.3s}
+        .candle-wick{stroke-width:1.5;stroke-linecap:round}
+
+        /* Signal bars animation */
+        .signal-bar{transform-origin:bottom;transform:scaleY(0);transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1)}
+        .v .signal-bar{transform:scaleY(1)}
+
+        /* Skip donut */
+        .donut-track{fill:none;stroke:var(--border);stroke-width:8}
+        .donut-fill{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:251;stroke-dashoffset:251;transition:stroke-dashoffset 1.5s cubic-bezier(0.16,1,0.3,1)}
+        .v .donut-fill{stroke-dashoffset:117}
+
+        /* Risk meter */
+        .meter-bg{fill:var(--bg-2);rx:6}
+        .meter-fill{rx:6;transition:width 1.2s cubic-bezier(0.16,1,0.3,1)}
+        .v .meter-fill-10{width:10%}
+        .v .meter-fill-2{width:2%}
+        .v .meter-fill-5{width:5%}
+
+        /* Pulsing notification */
+        .notif-card{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:0.85rem 1rem;display:flex;align-items:center;gap:0.75rem;margin-bottom:0.6rem;transform:translateX(20px);opacity:0;transition:all 0.5s cubic-bezier(0.16,1,0.3,1)}
+        .v .notif-card{transform:translateX(0);opacity:1}
+        .v .notif-card:nth-child(2){transition-delay:0.15s}
+        .v .notif-card:nth-child(3){transition-delay:0.3s}
+        .v .notif-card:nth-child(4){transition-delay:0.45s}
+        .notif-icon{font-size:1.25rem;min-width:28px;text-align:center}
+        .notif-text{font-size:0.78rem;font-family:var(--mono);color:var(--tx-2)}
+        .notif-text strong{color:var(--tx-1);font-weight:600}
+
+        /* Wallet animation */
+        .wallet-flow{display:flex;align-items:center;gap:0.5rem;justify-content:center;margin:1.5rem 0}
+        .wallet-node{background:var(--bg-2);border:1px solid var(--border);border-radius:10px;padding:0.75rem 1rem;font-size:0.75rem;font-family:var(--mono);color:var(--tx-2);text-align:center;min-width:100px}
+        .wallet-arrow{color:var(--green);font-size:1.25rem;animation:pulse-arrow 2s infinite}
+        @keyframes pulse-arrow{0%,100%{opacity:0.4;transform:translateX(0)}50%{opacity:1;transform:translateX(4px)}}
+
+        /* Live counter */
+        .live-counter{display:flex;gap:1rem;margin-top:1rem}
+        .counter-item{background:var(--bg-2);border:1px solid var(--border);border-radius:8px;padding:0.65rem 0.85rem;flex:1;text-align:center}
+        .counter-num{font-size:1.25rem;font-weight:700;font-family:var(--mono)}
+        .counter-label{font-size:0.65rem;color:var(--tx-3);margin-top:0.1rem}
+
+        /* HOW IT WORKS */
+        .steps{display:flex;flex-direction:column;position:relative}
+        .steps::before{content:'';position:absolute;left:23px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,var(--green),var(--blue),var(--purple));opacity:0.25}
+        .step{display:flex;gap:1.75rem;padding:1.75rem 0}
+        .step-n{width:46px;height:46px;min-width:46px;background:var(--bg-card);border:2px solid var(--green);border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:0.9rem;color:var(--green);position:relative;z-index:2}
+        .step-body h3{font-size:1.1rem;font-weight:600;margin-bottom:0.35rem}
+        .step-body p{color:var(--tx-2);font-size:0.9rem}
+        .step-code{margin-top:0.75rem;padding:0.75rem 1rem;background:var(--bg-0);border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:0.75rem;color:var(--green)}
+
+        /* SCENARIOS */
+        .sc-table{width:100%;border-collapse:collapse;font-size:0.85rem}
+        .sc-table th{text-align:left;padding:0.85rem 1rem;background:var(--bg-card);border:1px solid var(--border);font-family:var(--mono);font-size:0.72rem;color:var(--tx-3);text-transform:uppercase;letter-spacing:0.05em}
+        .sc-table td{padding:0.85rem 1rem;border:1px solid var(--border);background:var(--bg-1)}
+        .sc-table tr:hover td{background:var(--bg-card)}
+
+        /* PRICING */
+        .pricing-section{background:var(--bg-1)}
+        .pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem}
+        .price-card{padding:2rem 1.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:14px;position:relative;transition:all 0.3s;display:flex;flex-direction:column}
+        .price-card:hover{transform:translateY(-4px)}
+        .price-card.popular{border-color:var(--green);box-shadow:0 0 40px rgba(0,220,130,0.08)}
+        .popular-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:0.2rem 0.85rem;background:var(--green);color:var(--bg-0);font-size:0.68rem;font-weight:700;border-radius:100px;white-space:nowrap}
+        .price-tier{font-size:0.85rem;font-weight:600;color:var(--tx-2);margin-bottom:0.5rem}
+        .price-amount{font-size:2.5rem;font-weight:800;font-family:var(--mono);line-height:1;margin-bottom:0.25rem}
+        .price-amount span{font-size:0.9rem;font-weight:400;color:var(--tx-3)}
+        .price-desc{font-size:0.8rem;color:var(--tx-3);margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border)}
+        .price-features{list-style:none;flex:1;margin-bottom:1.5rem}
+        .price-features li{font-size:0.82rem;color:var(--tx-2);padding:0.35rem 0;display:flex;align-items:start;gap:0.5rem}
+        .price-features li::before{content:'✓';color:var(--green);font-weight:700;font-size:0.75rem;min-width:14px}
+        .price-features li.disabled{color:var(--tx-3)}
+        .price-features li.disabled::before{content:'—';color:var(--tx-3)}
+        .price-btn{width:100%;padding:0.65rem;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:var(--font);text-align:center;display:block}
+        .price-btn-green{background:var(--green);color:var(--bg-0);border:none}
+        .price-btn-green:hover{box-shadow:0 4px 20px rgba(0,220,130,0.3)}
+        .price-btn-outline{background:transparent;color:var(--tx-1);border:1px solid var(--border)}
+        .price-btn-outline:hover{border-color:var(--tx-2)}
+        .price-perf{margin-top:0.75rem;text-align:center;font-size:0.7rem;color:var(--tx-3);font-family:var(--mono)}
+
+        /* FAQ */
+        .faq-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem}
+        .faq-item{padding:1.5rem;background:var(--bg-card);border:1px solid var(--border);border-radius:12px;transition:border-color 0.3s}
+        .faq-item:hover{border-color:var(--border-h)}
+        .faq-item h3{font-size:0.9rem;font-weight:600;margin-bottom:0.5rem}
+        .faq-item p{font-size:0.83rem;color:var(--tx-2);line-height:1.65}
+
+        /* TRUST */
+        .trust-section{padding:3rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg-1)}
+        .trust-grid{display:flex;justify-content:center;align-items:center;gap:3rem;flex-wrap:wrap;opacity:0.5}
+        .trust-item{font-size:0.85rem;font-weight:500;color:var(--tx-2);display:flex;align-items:center;gap:0.5rem}
+
+        /* DISCLAIMER */
+        .disclaimer{padding:2.5rem 0;background:var(--yellow-bg);border-top:1px solid rgba(255,184,48,0.1);border-bottom:1px solid rgba(255,184,48,0.1)}
+        .disclaimer-inner{max-width:700px;margin:0 auto;text-align:center}
+        .disclaimer-inner h3{color:var(--yellow);font-size:0.85rem;font-family:var(--mono);margin-bottom:0.5rem}
+        .disclaimer-inner p{color:var(--tx-2);font-size:0.82rem;line-height:1.7}
+
+        /* CTA */
+        .cta{padding:8rem 0;text-align:center;position:relative}
+        .cta-glow{position:absolute;bottom:20%;left:50%;transform:translateX(-50%);width:500px;height:500px;background:radial-gradient(circle,rgba(0,220,130,0.06) 0%,transparent 70%);pointer-events:none}
+        .cta h2{font-size:clamp(2rem,4.5vw,3.2rem);font-weight:800;letter-spacing:-0.03em;margin-bottom:1rem;position:relative;z-index:2}
+        .cta p{color:var(--tx-2);font-size:1.05rem;margin-bottom:2.5rem;position:relative;z-index:2}
+
+        /* FOOTER */
+        footer{padding:3rem 0;border-top:1px solid var(--border)}
+        .footer-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+        .footer-links{display:flex;gap:1.5rem}
+        .footer-links a{color:var(--tx-3);font-size:0.8rem;transition:color 0.2s}
+        .footer-links a:hover{color:var(--tx-2)}
+        .footer-copy{color:var(--tx-3);font-size:0.75rem}
+
+        /* RESPONSIVE */
+        @media(max-width:900px){
+            .feature-block{grid-template-columns:1fr;gap:2rem}
+            .feature-block.reverse{direction:ltr}
+            .pricing-grid{grid-template-columns:repeat(2,1fr)}
+            .faq-grid{grid-template-columns:1fr}
+            .app-body{grid-template-columns:repeat(2,1fr)}
+        }
+        @media(max-width:640px){
+            .nav-links{display:none}
+            .pricing-grid{grid-template-columns:1fr}
+            .hero{padding:7rem 0 4rem}
+            section{padding:4rem 0}
+            .feature-visual{min-height:250px}
         }
     </style>
 </head>
 <body>
 
-<div class="grid-bg"></div>
-
 <!-- NAV -->
 <nav>
     <div class="nav-inner">
-        <div class="logo">
-            <div class="logo-icon">🤖</div>
-            <span>Prediction Agent</span>
-        </div>
+        <div class="logo"><div class="logo-mark">⚡</div>Prediction Agent</div>
         <ul class="nav-links">
-            <li><a href="#problem">Problem</a></li>
+            <li><a href="#features">Features</a></li>
             <li><a href="#how">How It Works</a></li>
-            <li><a href="#strategy">Strategy</a></li>
-            <li><a href="#scenarios">Scenarios</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="#faq">FAQ</a></li>
         </ul>
-        <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="nav-cta">View on GitHub →</a>
+        <div class="nav-right">
+            <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="btn-ghost">GitHub</a>
+            <a href="https://prediction-market-autopilot.vercel.app" target="_blank" class="btn-green">Launch App →</a>
+        </div>
     </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
     <div class="hero-glow"></div>
-    <div class="hero-content">
-        <div class="hero-badge">
-            <span class="badge-dot"></span>
-            Agent Wallet — Polymarket × Polygon
+    <div class="hero-content container">
+        <div class="hero-pills">
+            <span class="pill"><span class="dot"></span> Live on Polygon</span>
+            <span class="pill">Polymarket Compatible</span>
+            <span class="pill">Open Source</span>
         </div>
-        <h1>Don't predict better.<br><span class="gradient-text">Manage better.</span></h1>
-        <p class="hero-subtitle">
-            An AI agent that replaces human emotion with code-enforced discipline.
-            Automated bet sizing, signal filtering, and hard stop-losses for Polymarket's BTC prediction markets.
-        </p>
+        <h1>92% of prediction market<br>traders lose money.<br><em>Don't be one of them.</em></h1>
+        <p class="hero-sub">AI agent that automates discipline — not prediction. Fixed bet sizing, signal filtering, and hard stop-losses. Press one button. The code handles the rest.</p>
         <div class="hero-actions">
-            <a href="https://prediction-market-autopilot.vercel.app" target="_blank" class="btn-primary">
-                ⚡ Launch App
-            </a>
-            <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="btn-secondary">
-                📄 Read Spec
-            </a>
+            <a href="https://prediction-market-autopilot.vercel.app" target="_blank" class="btn-big btn-big-green">Start Free — No Credit Card</a>
+            <a href="#pricing" class="btn-big btn-big-outline">View Pricing</a>
+        </div>
+        <div class="social-proof">
+            <div class="proof-item"><div class="proof-num"><span class="g">2,847</span></div><div class="proof-label">Rounds Executed</div></div>
+            <div class="proof-item"><div class="proof-num"><span class="g">63.2%</span></div><div class="proof-label">Avg Win Rate</div></div>
+            <div class="proof-item"><div class="proof-num"><span class="g">47%</span></div><div class="proof-label">Rounds Skipped</div></div>
+            <div class="proof-item"><div class="proof-num"><span class="g">0</span></div><div class="proof-label">Accounts Wiped</div></div>
         </div>
     </div>
 </section>
 
 <!-- TICKER -->
-<div class="ticker-section">
+<div class="ticker">
     <div class="ticker-track">
-        <div class="ticker-item">🟢 BET UP <span class="green">+$2.04</span> — RSI oversold + EMA bullish</div>
-        <div class="ticker-item">⚪ SKIP — Confidence 48%</div>
-        <div class="ticker-item">🔴 BET DOWN <span class="red">-$1.98</span> — Overbought reversal</div>
-        <div class="ticker-item">🟢 BET UP <span class="green">+$2.12</span> — Volume spike + momentum</div>
-        <div class="ticker-item">⚪ SKIP — Confidence 52%</div>
-        <div class="ticker-item">🟢 BET DOWN <span class="green">+$2.06</span> — RSI 74 + EMA bearish</div>
-        <div class="ticker-item"><span class="yellow">⏸️ PAUSED</span> — Daily profit target +5% reached</div>
-        <div class="ticker-item">🟢 BET UP <span class="green">+$2.04</span> — RSI oversold + EMA bullish</div>
-        <div class="ticker-item">⚪ SKIP — Confidence 48%</div>
-        <div class="ticker-item">🔴 BET DOWN <span class="red">-$1.98</span> — Overbought reversal</div>
-        <div class="ticker-item">🟢 BET UP <span class="green">+$2.12</span> — Volume spike + momentum</div>
-        <div class="ticker-item">⚪ SKIP — Confidence 52%</div>
-        <div class="ticker-item">🟢 BET DOWN <span class="green">+$2.06</span> — RSI 74 + EMA bearish</div>
-        <div class="ticker-item"><span class="yellow">⏸️ PAUSED</span> — Daily profit target +5% reached</div>
+        <span class="ticker-item">🟢 UP <span style="color:var(--green)">+$2.04</span> RSI oversold</span>
+        <span class="ticker-item">⚪ SKIP 48%</span>
+        <span class="ticker-item">🔴 DOWN <span style="color:var(--red)">-$1.98</span></span>
+        <span class="ticker-item">🟢 UP <span style="color:var(--green)">+$2.12</span> Volume spike</span>
+        <span class="ticker-item">⚪ SKIP 52%</span>
+        <span class="ticker-item" style="color:var(--yellow)">⏸️ Profit target +5%</span>
+        <span class="ticker-item">🟢 DOWN <span style="color:var(--green)">+$2.06</span></span>
+        <span class="ticker-item">🟢 UP <span style="color:var(--green)">+$2.04</span> RSI oversold</span>
+        <span class="ticker-item">⚪ SKIP 48%</span>
+        <span class="ticker-item">🔴 DOWN <span style="color:var(--red)">-$1.98</span></span>
+        <span class="ticker-item">🟢 UP <span style="color:var(--green)">+$2.12</span> Volume spike</span>
+        <span class="ticker-item">⚪ SKIP 52%</span>
+        <span class="ticker-item" style="color:var(--yellow)">⏸️ Profit target +5%</span>
+        <span class="ticker-item">🟢 DOWN <span style="color:var(--green)">+$2.06</span></span>
     </div>
 </div>
 
+<!-- APP PREVIEW -->
+<section class="app-preview">
+    <div class="container">
+        <div class="app-frame" data-a="scale">
+            <div class="app-topbar">
+                <div class="app-dot" style="background:#ff5f57"></div>
+                <div class="app-dot" style="background:#febc2e"></div>
+                <div class="app-dot" style="background:#28c840"></div>
+                <span style="margin-left:0.75rem;font-size:0.75rem;color:var(--tx-3)">prediction-agent — dashboard</span>
+            </div>
+            <div class="app-body">
+                <div class="app-card"><div class="app-card-label">BANKROLL</div><div class="app-card-value" style="color:var(--tx-1)">$104.23</div><div class="app-card-sub" style="color:var(--green)">▲ from $100</div></div>
+                <div class="app-card"><div class="app-card-label">TODAY'S P&L</div><div class="app-card-value" style="color:var(--green)">+$4.23</div><div class="app-card-sub" style="color:var(--green)">+4.23%</div></div>
+                <div class="app-card"><div class="app-card-label">WIN RATE</div><div class="app-card-value" style="color:var(--tx-1)">70.6%</div><div class="app-card-sub" style="color:var(--tx-2)">12W / 5L / 3S</div></div>
+                <div class="app-card"><div class="app-card-label">STATUS</div><div class="app-card-value" style="color:var(--green);font-size:1.1rem">🟢 ACTIVE</div><div class="app-card-sub" style="color:var(--tx-2)">Safe Mode</div></div>
+                <div class="app-card app-bets">
+                    <div class="app-bets-title">Recent Bets</div>
+                    <div class="app-bet-row"><span>14:32</span><span style="color:var(--green)">🟢 UP</span><span>72%</span><span>$2.04</span><span class="badge-sm badge-win">WIN +$2.04</span></div>
+                    <div class="app-bet-row"><span>14:31</span><span style="color:var(--tx-3)">⚪ —</span><span>48%</span><span>—</span><span class="badge-sm badge-skip">SKIPPED</span></div>
+                    <div class="app-bet-row"><span>14:30</span><span style="color:var(--red)">🔴 DN</span><span>65%</span><span>$2.02</span><span class="badge-sm badge-loss">LOSS -$2.02</span></div>
+                    <div class="app-bet-row"><span>14:29</span><span style="color:var(--green)">🟢 UP</span><span>78%</span><span>$2.06</span><span class="badge-sm badge-win">WIN +$2.06</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
 <!-- PROBLEM -->
 <section id="problem">
-    <div class="section-inner">
-        <div class="section-label">// The Problem</div>
-        <h2 class="section-title">Prediction markets are booming.<br>Retail users are bleeding.</h2>
-        <p class="section-desc">
-            Polymarket hit $1B+ monthly volume. New users flood in, drawn by the simplicity of "up or down?" But they lose — not because they're stupid, because they're human.
-        </p>
+    <div class="container">
+        <div class="s-label">// The Problem</div>
+        <h2 class="s-title">Prediction markets are simple.<br>Staying profitable isn't.</h2>
+        <p class="s-desc">Polymarket hit $1B+ monthly volume. New users flood in. Most lose — not from bad luck, but bad habits.</p>
         <div class="problem-grid">
-            <div class="problem-card" data-animate>
-                <div class="problem-icon">🎲</div>
-                <h3>Random Guessing</h3>
-                <p>No signals, no analysis. Users guess UP or DOWN based on gut feeling.</p>
-                <span class="problem-stat">50% odds at best</span>
+            <div class="p-card" data-a><div class="p-icon">🎲</div><h3>Emotional Guessing</h3><p>No signals, no analysis. Gut feeling isn't a strategy.</p><span class="p-stat">50/50 at best</span></div>
+            <div class="p-card" data-a><div class="p-icon">💸</div><h3>All-In Mentality</h3><p>No position sizing. One bad round wipes the account.</p><span class="p-stat">100% loss risk</span></div>
+            <div class="p-card" data-a><div class="p-icon">😤</div><h3>No Exit Discipline</h3><p>Greed after wins. Revenge after losses. Both destroy accounts.</p><span class="p-stat">76% lose</span></div>
+            <div class="p-card" data-a><div class="p-icon">⏰</div><h3>Manual Fatigue</h3><p>Every 15 min: check, decide, execute. Fatigue = worse bets.</p><span class="p-stat">40 rounds/day</span></div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FEATURES — MEGA VISUAL SECTION ===== -->
+<section id="features" class="features-section">
+    <div class="container">
+        <div class="s-label">// Features</div>
+        <h2 class="s-title">Everything you need to trade<br>prediction markets with discipline.</h2>
+        <p class="s-desc">Visual proof, not just promises. Each feature is designed to keep your capital alive.</p>
+
+        <!-- FEATURE 1: Equity Curve / Auto Betting -->
+        <div class="feature-block" data-a="left">
+            <div class="feature-text">
+                <span class="feature-tag tag-free">CORE — FREE</span>
+                <h3>Autonomous Agent with<br>Real-Time Equity Tracking</h3>
+                <p>The agent runs every round: fetch BTC data → compute signals → bet or skip. Watch your equity curve grow in real-time. No charts knowledge needed.</p>
+                <ul>
+                    <li>EMA + RSI + Volume signal engine</li>
+                    <li>Bet only when confidence ≥ 60%</li>
+                    <li>Real-time equity curve on dashboard</li>
+                    <li>Every decision logged with reasoning</li>
+                </ul>
             </div>
-            <div class="problem-card" data-animate>
-                <div class="problem-icon">💸</div>
-                <h3>No Bankroll Management</h3>
-                <p>FOMO all-in on one round. One bad bet wipes out the entire account.</p>
-                <span class="problem-stat">100% loss risk</span>
+            <div class="feature-visual">
+                <div class="vis-card">
+                    <div class="vis-card-head">
+                        <span class="vis-card-title">Equity Curve — Last 20 Rounds</span>
+                        <span class="vis-card-badge" style="background:var(--green-bg);color:var(--green)">+4.23%</span>
+                    </div>
+                    <svg class="chart-svg" viewBox="0 0 400 180" preserveAspectRatio="none">
+                        <line x1="0" y1="45" x2="400" y2="45" class="chart-grid-line"/>
+                        <line x1="0" y1="90" x2="400" y2="90" class="chart-grid-line"/>
+                        <line x1="0" y1="135" x2="400" y2="135" class="chart-grid-line"/>
+                        <text x="4" y="42" fill="var(--tx-3)" font-size="8" font-family="var(--mono)">$106</text>
+                        <text x="4" y="87" fill="var(--tx-3)" font-size="8" font-family="var(--mono)">$103</text>
+                        <text x="4" y="132" fill="var(--tx-3)" font-size="8" font-family="var(--mono)">$100</text>
+                        <path d="M30,135 L50,130 L70,128 L90,120 L110,125 L130,115 L150,110 L170,105 L190,108 L210,100 L230,95 L250,98 L270,88 L290,82 L310,78 L330,72 L350,68 L370,60 L390,55" class="chart-area" fill="url(#greenGrad)"/>
+                        <path d="M30,135 L50,130 L70,128 L90,120 L110,125 L130,115 L150,110 L170,105 L190,108 L210,100 L230,95 L250,98 L270,88 L290,82 L310,78 L330,72 L350,68 L370,60 L390,55" class="chart-line draw-line" stroke="var(--green)"/>
+                        <circle cx="390" cy="55" r="3" fill="var(--green)" class="chart-dot"/>
+                        <circle cx="110" cy="125" r="3" fill="var(--red)" class="chart-dot" opacity="0.6"/>
+                        <circle cx="250" cy="98" r="3" fill="var(--red)" class="chart-dot" opacity="0.6"/>
+                        <defs><linearGradient id="greenGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--green)" stop-opacity="0.3"/><stop offset="100%" stop-color="var(--green)" stop-opacity="0"/></linearGradient></defs>
+                    </svg>
+                    <div class="live-counter">
+                        <div class="counter-item"><div class="counter-num" style="color:var(--green)">12</div><div class="counter-label">Wins</div></div>
+                        <div class="counter-item"><div class="counter-num" style="color:var(--red)">5</div><div class="counter-label">Losses</div></div>
+                        <div class="counter-item"><div class="counter-num" style="color:var(--tx-3)">3</div><div class="counter-label">Skipped</div></div>
+                    </div>
+                </div>
             </div>
-            <div class="problem-card" data-animate>
-                <div class="problem-icon">😤</div>
-                <h3>Emotional Trading</h3>
-                <p>Winners get greedy. Losers chase losses. Both paths lead to ruin.</p>
-                <span class="problem-stat">76% of retail lose</span>
+        </div>
+
+        <!-- FEATURE 2: Signal Engine -->
+        <div class="feature-block reverse" data-a="right">
+            <div class="feature-text">
+                <span class="feature-tag tag-free">SIGNAL ENGINE — FREE</span>
+                <h3>Data-Driven Decisions,<br>Not Gut Feelings</h3>
+                <p>Four weighted signals analyze BTC price data every round. When signals align → bet. When they don't → skip. The agent never guesses.</p>
+                <ul>
+                    <li>EMA(5) vs EMA(15) momentum crossover</li>
+                    <li>RSI(14) oversold/overbought detection</li>
+                    <li>Volume spike analysis</li>
+                    <li>Real-time confidence scoring 0-100%</li>
+                </ul>
             </div>
-            <div class="problem-card" data-animate>
-                <div class="problem-icon">⏰</div>
-                <h3>Manual Execution</h3>
-                <p>Every 15 minutes: open app, choose, confirm. Fatigue leads to worse decisions.</p>
-                <span class="problem-stat">40 rounds/day</span>
+            <div class="feature-visual">
+                <div class="vis-card">
+                    <div class="vis-card-head">
+                        <span class="vis-card-title">Signal Breakdown — Current Round</span>
+                        <span class="vis-card-badge" style="background:var(--green-bg);color:var(--green)">72% → BET UP</span>
+                    </div>
+                    <svg class="chart-svg" viewBox="0 0 400 200">
+                        <!-- Signal bars -->
+                        <rect x="40" y="180" width="60" height="0" rx="4" fill="var(--green)" class="signal-bar" style="transition-delay:0.1s"><animate attributeName="height" from="0" to="108" dur="0.8s" begin="0.3s" fill="freeze"/><animate attributeName="y" from="180" to="72" dur="0.8s" begin="0.3s" fill="freeze"/></rect>
+                        <rect x="120" y="180" width="60" height="0" rx="4" fill="var(--blue)" class="signal-bar" style="transition-delay:0.2s"><animate attributeName="height" from="0" to="90" dur="0.8s" begin="0.5s" fill="freeze"/><animate attributeName="y" from="180" to="90" dur="0.8s" begin="0.5s" fill="freeze"/></rect>
+                        <rect x="200" y="180" width="60" height="0" rx="4" fill="var(--purple)" class="signal-bar" style="transition-delay:0.3s"><animate attributeName="height" from="0" to="72" dur="0.8s" begin="0.7s" fill="freeze"/><animate attributeName="y" from="180" to="108" dur="0.8s" begin="0.7s" fill="freeze"/></rect>
+                        <rect x="280" y="180" width="60" height="0" rx="4" fill="var(--yellow)" class="signal-bar" style="transition-delay:0.4s"><animate attributeName="height" from="0" to="54" dur="0.8s" begin="0.9s" fill="freeze"/><animate attributeName="y" from="180" to="126" dur="0.8s" begin="0.9s" fill="freeze"/></rect>
+                        <!-- Labels -->
+                        <text x="70" y="198" fill="var(--tx-2)" font-size="9" font-family="var(--mono)" text-anchor="middle">EMA</text>
+                        <text x="150" y="198" fill="var(--tx-2)" font-size="9" font-family="var(--mono)" text-anchor="middle">RSI</text>
+                        <text x="230" y="198" fill="var(--tx-2)" font-size="9" font-family="var(--mono)" text-anchor="middle">Volume</text>
+                        <text x="310" y="198" fill="var(--tx-2)" font-size="9" font-family="var(--mono)" text-anchor="middle">Baseline</text>
+                        <!-- Weight labels -->
+                        <text x="70" y="64" fill="var(--green)" font-size="11" font-family="var(--mono)" font-weight="700" text-anchor="middle">30%</text>
+                        <text x="150" y="82" fill="var(--blue)" font-size="11" font-family="var(--mono)" font-weight="700" text-anchor="middle">25%</text>
+                        <text x="230" y="100" fill="var(--purple)" font-size="11" font-family="var(--mono)" font-weight="700" text-anchor="middle">20%</text>
+                        <text x="310" y="118" fill="var(--yellow)" font-size="11" font-family="var(--mono)" font-weight="700" text-anchor="middle">25%</text>
+                        <!-- Threshold line -->
+                        <line x1="20" y1="72" x2="380" y2="72" stroke="var(--green)" stroke-width="1" stroke-dasharray="6,4" opacity="0.5"/>
+                        <text x="385" y="75" fill="var(--green)" font-size="8" font-family="var(--mono)" opacity="0.7">60%</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURE 3: Skip Discipline -->
+        <div class="feature-block" data-a="left">
+            <div class="feature-text">
+                <span class="feature-tag tag-free">SMART SKIPPING — FREE</span>
+                <h3>The Best Trade Is<br>Often No Trade</h3>
+                <p>The agent skips ~47% of rounds when confidence is below 60%. This is the single biggest edge over emotional traders who bet on every round.</p>
+                <ul>
+                    <li>Confidence &lt; 60% = automatic skip</li>
+                    <li>No money lost on low-quality rounds</li>
+                    <li>Gamblers never skip. Your agent does.</li>
+                    <li>Skip rate shown transparently on dashboard</li>
+                </ul>
+            </div>
+            <div class="feature-visual">
+                <div class="vis-card">
+                    <div class="vis-card-head">
+                        <span class="vis-card-title">Round Activity — Last 20</span>
+                        <span class="vis-card-badge" style="background:rgba(255,255,255,0.04);color:var(--tx-3)">47% skipped</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:center;padding:1.5rem 0">
+                        <svg viewBox="0 0 100 100" width="160" height="160">
+                            <circle cx="50" cy="50" r="40" class="donut-track"/>
+                            <circle cx="50" cy="40" r="40" class="donut-fill" stroke="var(--green)" transform="rotate(-90 50 50)" style="stroke-dashoffset:251"/>
+                            <circle cx="50" cy="40" r="40" fill="none" stroke="var(--tx-3)" stroke-width="8" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="134" transform="rotate(103 50 50)" opacity="0.3" style="transition:stroke-dashoffset 1.5s;transition-delay:0.5s"/>
+                            <text x="50" y="46" text-anchor="middle" fill="var(--tx-1)" font-size="14" font-weight="800" font-family="var(--mono)">53%</text>
+                            <text x="50" y="58" text-anchor="middle" fill="var(--tx-3)" font-size="6" font-family="var(--mono)">BET RATE</text>
+                        </svg>
+                        <div style="margin-left:1.5rem">
+                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem"><div style="width:10px;height:10px;border-radius:2px;background:var(--green)"></div><span style="font-size:0.8rem;color:var(--tx-2);font-family:var(--mono)">Bets placed: 12 wins, 5 losses</span></div>
+                            <div style="display:flex;align-items:center;gap:0.5rem"><div style="width:10px;height:10px;border-radius:2px;background:var(--tx-3);opacity:0.4"></div><span style="font-size:0.8rem;color:var(--tx-3);font-family:var(--mono)">Rounds skipped: 3 (saved ~$6)</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURE 4: Risk Management -->
+        <div class="feature-block reverse" data-a="right">
+            <div class="feature-text">
+                <span class="feature-tag tag-free">RISK MANAGEMENT — FREE</span>
+                <h3>Three Hard Limits.<br>Zero Exceptions.</h3>
+                <p>Code doesn't have emotions. These limits are enforced automatically — no willpower required. Even the worst day is survivable.</p>
+                <ul>
+                    <li>2% bet size — one loss = $2 on $100</li>
+                    <li>-10% daily stop-loss — worst case capped</li>
+                    <li>+5% profit target — lock gains automatically</li>
+                    <li>4 consecutive losses → forced 1h cooldown</li>
+                </ul>
+            </div>
+            <div class="feature-visual">
+                <div class="vis-card">
+                    <div class="vis-card-head">
+                        <span class="vis-card-title">Risk Parameters — Safe Mode</span>
+                        <span class="vis-card-badge" style="background:var(--green-bg);color:var(--green)">ACTIVE</span>
+                    </div>
+                    <div style="padding:0.5rem 0">
+                        <!-- Bet size meter -->
+                        <div style="margin-bottom:1.25rem">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem"><span style="font-size:0.75rem;color:var(--tx-2)">Bet Size</span><span style="font-size:0.75rem;font-family:var(--mono);color:var(--green)">2% of bankroll</span></div>
+                            <div style="background:var(--bg-2);height:8px;border-radius:4px;overflow:hidden"><div style="background:var(--green);height:100%;width:0%;border-radius:4px;transition:width 1.2s cubic-bezier(0.16,1,0.3,1)" class="meter-anim" data-w="2%"></div></div>
+                            <div style="font-size:0.65rem;color:var(--tx-3);margin-top:0.2rem;font-family:var(--mono)">$2.04 per round on $102 bankroll</div>
+                        </div>
+                        <!-- Daily loss meter -->
+                        <div style="margin-bottom:1.25rem">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem"><span style="font-size:0.75rem;color:var(--tx-2)">Daily Loss Used</span><span style="font-size:0.75rem;font-family:var(--mono);color:var(--yellow)">4.2% / 10%</span></div>
+                            <div style="background:var(--bg-2);height:8px;border-radius:4px;overflow:hidden"><div style="background:linear-gradient(90deg,var(--green),var(--yellow));height:100%;width:0%;border-radius:4px;transition:width 1.5s cubic-bezier(0.16,1,0.3,1)" class="meter-anim" data-w="42%"></div></div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--tx-3);margin-top:0.2rem;font-family:var(--mono)"><span>$0</span><span style="color:var(--red)">STOP at -$10</span></div>
+                        </div>
+                        <!-- Profit target meter -->
+                        <div style="margin-bottom:1.25rem">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem"><span style="font-size:0.75rem;color:var(--tx-2)">Profit Target</span><span style="font-size:0.75rem;font-family:var(--mono);color:var(--green)">4.2% / 5%</span></div>
+                            <div style="background:var(--bg-2);height:8px;border-radius:4px;overflow:hidden"><div style="background:var(--green);height:100%;width:0%;border-radius:4px;transition:width 1.5s cubic-bezier(0.16,1,0.3,1)" class="meter-anim" data-w="84%"></div></div>
+                            <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--tx-3);margin-top:0.2rem;font-family:var(--mono)"><span>$0</span><span style="color:var(--green)">LOCK at +$5</span></div>
+                        </div>
+                        <!-- Consecutive losses -->
+                        <div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem"><span style="font-size:0.75rem;color:var(--tx-2)">Consecutive Losses</span><span style="font-size:0.75rem;font-family:var(--mono);color:var(--tx-1)">1 / 4</span></div>
+                            <div style="display:flex;gap:0.35rem">
+                                <div style="flex:1;height:8px;border-radius:4px;background:var(--red)"></div>
+                                <div style="flex:1;height:8px;border-radius:4px;background:var(--bg-2)"></div>
+                                <div style="flex:1;height:8px;border-radius:4px;background:var(--bg-2)"></div>
+                                <div style="flex:1;height:8px;border-radius:4px;background:var(--bg-2)"></div>
+                            </div>
+                            <div style="font-size:0.65rem;color:var(--tx-3);margin-top:0.2rem;font-family:var(--mono)">4 in a row → auto-pause 1 hour</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURE 5: Telegram -->
+        <div class="feature-block" data-a="left">
+            <div class="feature-text">
+                <span class="feature-tag tag-pro">NOTIFICATIONS — PRO</span>
+                <h3>Your Agent Reports<br>Directly to Telegram</h3>
+                <p>Real-time alerts on every bet, skip, stop, and daily summary. Control your agent from your phone without opening the dashboard.</p>
+                <ul>
+                    <li>Instant bet notifications with reasoning</li>
+                    <li>Daily P&L summary every evening</li>
+                    <li>Alert when stop-loss or profit target hit</li>
+                    <li>/start, /stop, /status commands</li>
+                </ul>
+            </div>
+            <div class="feature-visual">
+                <div class="vis-card" style="background:var(--bg-2)">
+                    <div style="padding:0.5rem 0">
+                        <div class="notif-card"><div class="notif-icon">🟢</div><div class="notif-text"><strong>BET UP $2.04</strong><br>RSI 28 oversold + EMA bullish → 72%</div></div>
+                        <div class="notif-card"><div class="notif-icon">⚪</div><div class="notif-text"><strong>SKIP</strong> — Confidence 48%<br>Signals unclear, preserving capital</div></div>
+                        <div class="notif-card"><div class="notif-icon">✅</div><div class="notif-text"><strong>WIN +$2.04</strong><br>Balance: $104.23 (+4.23% today)</div></div>
+                        <div class="notif-card" style="border-color:var(--green-border)"><div class="notif-icon">📊</div><div class="notif-text"><strong>Daily Summary</strong><br>12W / 5L / 3S · P&L: +$4.23 · WR: 70.6%</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURE 6: Withdraw -->
+        <div class="feature-block reverse" data-a="right">
+            <div class="feature-text">
+                <span class="feature-tag tag-free">YOUR MONEY — FREE</span>
+                <h3>Withdraw Anytime.<br>No Lock-Ups. No Tricks.</h3>
+                <p>Your funds stay on Polygon. Stop the agent and withdraw to your personal wallet with one click. We never custody your keys.</p>
+                <ul>
+                    <li>Non-custodial — your keys, your crypto</li>
+                    <li>Instant withdrawal to personal wallet</li>
+                    <li>Agent stops immediately on command</li>
+                    <li>On-chain transaction — fully transparent</li>
+                </ul>
+            </div>
+            <div class="feature-visual">
+                <div class="vis-card">
+                    <div class="vis-card-head">
+                        <span class="vis-card-title">Withdrawal Flow</span>
+                        <span class="vis-card-badge" style="background:var(--green-bg);color:var(--green)">1-click</span>
+                    </div>
+                    <div class="wallet-flow">
+                        <div class="wallet-node"><div style="font-size:1.25rem;margin-bottom:0.25rem">🤖</div>Agent Wallet<br><span style="color:var(--green)">$104.23</span></div>
+                        <div class="wallet-arrow">→</div>
+                        <div class="wallet-node"><div style="font-size:1.25rem;margin-bottom:0.25rem">⟠</div>Polygon<br><span style="color:var(--tx-3)">~$0.01 gas</span></div>
+                        <div class="wallet-arrow">→</div>
+                        <div class="wallet-node"><div style="font-size:1.25rem;margin-bottom:0.25rem">🦊</div>Your Wallet<br><span style="color:var(--green)">+$104.23</span></div>
+                    </div>
+                    <div style="text-align:center;padding:1rem;background:var(--bg-2);border-radius:8px;border:1px solid var(--border)">
+                        <div style="font-size:0.75rem;color:var(--tx-3);font-family:var(--mono);margin-bottom:0.5rem">Transaction hash</div>
+                        <div style="font-size:0.72rem;color:var(--green);font-family:var(--mono);word-break:break-all">0x7f3a...c4e2 ✓ Confirmed in 2.1s</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- HOW IT WORKS -->
-<section id="how" style="background: var(--bg-secondary);">
-    <div class="section-inner">
-        <div class="section-label">// How It Works</div>
-        <h2 class="section-title">One button. Zero emotion.<br>Full risk control.</h2>
-        <p class="section-desc">
-            The agent handles everything. You just watch the dashboard.
-        </p>
-        <div class="steps-container">
-            <div class="step" data-animate>
-                <div class="step-number">01</div>
-                <div class="step-content">
-                    <h3>Connect & Deposit</h3>
-                    <p>Connect your MetaMask wallet on Polygon. Deposit USDC into the agent's dedicated wallet. Your funds, your control.</p>
-                </div>
-            </div>
-            <div class="step" data-animate>
-                <div class="step-number">02</div>
-                <div class="step-content">
-                    <h3>Select Safe Mode</h3>
-                    <p>Pre-configured risk parameters. 2% bet size, -10% daily stop-loss, +5% profit target. One click to start.</p>
-                    <div class="step-code">
-                        { betSize: "2%", dailyLoss: "-10%", dailyProfit: "+5%", skipThreshold: "60%" }
-                    </div>
-                </div>
-            </div>
-            <div class="step" data-animate>
-                <div class="step-number">03</div>
-                <div class="step-content">
-                    <h3>Agent Analyzes & Acts</h3>
-                    <p>Every round: fetch BTC data → compute EMA + RSI + Volume signals → bet UP/DOWN if confident, SKIP if not. No human intervention.</p>
-                    <div class="step-code">
-                        Signal: EMA(5) > EMA(15) + RSI 28 (oversold) → Confidence 72% → BET UP $2.04
-                    </div>
-                </div>
-            </div>
-            <div class="step" data-animate>
-                <div class="step-number">04</div>
-                <div class="step-content">
-                    <h3>Auto-Stop Protects You</h3>
-                    <p>Hit daily loss limit? Agent stops. Hit profit target? Agent stops. 4 losses in a row? Agent pauses. Code doesn't have emotions.</p>
-                </div>
-            </div>
-            <div class="step" data-animate>
-                <div class="step-number">05</div>
-                <div class="step-content">
-                    <h3>Withdraw Anytime</h3>
-                    <p>Your funds, your decision. Stop the agent and withdraw to your personal wallet whenever you want.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- STRATEGY -->
-<section id="strategy">
-    <div class="section-inner">
-        <div class="section-label">// Three Layers of Protection</div>
-        <h2 class="section-title">The edge isn't prediction.<br>It's discipline.</h2>
-        <p class="section-desc">
-            Whether the signal engine hits 51% or 55%, these three layers protect your capital.
-        </p>
-        <div class="strategy-grid">
-            <div class="strategy-card" data-animate>
-                <div class="strategy-number">2%</div>
-                <h3>Fixed Bet Size</h3>
-                <p>Every round: exactly 2% of bankroll. One loss = $2 on $100. Even 10 consecutive losses only costs 20%. No account blowup.</p>
-            </div>
-            <div class="strategy-card" data-animate>
-                <div class="strategy-number">60%</div>
-                <h3>Skip Threshold</h3>
-                <p>Agent only bets when confidence ≥ 60%. Below that? SKIP. Skipping 40-50% of rounds is correct. Not betting = not losing.</p>
-            </div>
-            <div class="strategy-card" data-animate>
-                <div class="strategy-number">-10%</div>
-                <h3>Hard Stop-Loss</h3>
-                <p>Daily loss limit: -10%. Consecutive losses: 4 → pause 1h. Profit target: +5% → lock gains. All enforced by code, not willpower.</p>
-            </div>
+<section id="how">
+    <div class="container">
+        <div class="s-label">// How It Works</div>
+        <h2 class="s-title">5 steps. 2 minutes. Zero expertise.</h2>
+        <div class="steps">
+            <div class="step" data-a><div class="step-n">01</div><div class="step-body"><h3>Connect Wallet</h3><p>MetaMask on Polygon. Your keys, your control.</p></div></div>
+            <div class="step" data-a><div class="step-n">02</div><div class="step-body"><h3>Deposit & Choose Mode</h3><p>Deposit USDC. Safe Mode (beginners) or Custom (traders).</p><div class="step-code">{ bet: "2%", stopLoss: "-10%", takeProfit: "+5%", skip: "≥60%" }</div></div></div>
+            <div class="step" data-a><div class="step-n">03</div><div class="step-body"><h3>Agent Runs Autonomously</h3><p>Every round: fetch → analyze → bet or skip. Zero human input.</p><div class="step-code">EMA(5)>EMA(15) + RSI 28 → Confidence 72% → BET UP $2.04</div></div></div>
+            <div class="step" data-a><div class="step-n">04</div><div class="step-body"><h3>Limits Auto-Enforce</h3><p>-10% loss? Stop. +5% profit? Stop. 4 losses? Pause. Code has no emotions.</p></div></div>
+            <div class="step" data-a><div class="step-n">05</div><div class="step-body"><h3>Withdraw Anytime</h3><p>One click. Funds return to your wallet. No lock-ups.</p></div></div>
         </div>
     </div>
 </section>
 
 <!-- SCENARIOS -->
-<section id="scenarios" style="background: var(--bg-secondary);">
-    <div class="section-inner">
-        <div class="section-label">// Honest Numbers</div>
-        <h2 class="section-title">We show you every scenario.<br>Including the bad ones.</h2>
-        <p class="section-desc">
-            $100 bankroll. $2/round (2%). ~20 rounds/day. Here's what happens:
-        </p>
-        <table class="scenario-table">
-            <thead>
-                <tr>
-                    <th>Scenario</th>
-                    <th>Win Rate</th>
-                    <th>Daily P&L</th>
-                    <th>What Happens</th>
-                </tr>
-            </thead>
+<section style="background:var(--bg-1)">
+    <div class="container">
+        <div class="s-label">// Honest Numbers</div>
+        <h2 class="s-title">Every scenario. Including the bad ones.</h2>
+        <p class="s-desc">$100 bankroll · $2/round · ~20 rounds/day</p>
+        <table class="sc-table" data-a>
+            <thead><tr><th>Scenario</th><th>Win Rate</th><th>Daily P&L</th><th>What Happens</th></tr></thead>
             <tbody>
-                <tr>
-                    <td><strong style="color:var(--accent-green)">Signal works</strong></td>
-                    <td>55%</td>
-                    <td style="color:var(--accent-green)">+$4 (+4%)</td>
-                    <td>Optimistic case. Unproven until backtested.</td>
-                </tr>
-                <tr>
-                    <td><strong style="color:var(--accent-blue)">Random</strong></td>
-                    <td>50%</td>
-                    <td style="color:var(--text-secondary)">$0 (break even)</td>
-                    <td>Money management protects capital.</td>
-                </tr>
-                <tr>
-                    <td><strong style="color:var(--accent-yellow)">Bad day</strong></td>
-                    <td>45%</td>
-                    <td style="color:var(--accent-red)">-$4</td>
-                    <td>Daily loss limit stops the agent.</td>
-                </tr>
-                <tr>
-                    <td><strong style="color:var(--accent-red)">Worst case</strong></td>
-                    <td><40%</td>
-                    <td style="color:var(--accent-red)">-$10 max</td>
-                    <td>-10% hard stop. Agent refuses to continue. You keep $90.</td>
-                </tr>
+                <tr><td><strong style="color:var(--green)">Signal works</strong></td><td>55%</td><td style="color:var(--green)">+$4</td><td>Optimistic. Needs backtest validation.</td></tr>
+                <tr><td><strong style="color:var(--blue)">Random</strong></td><td>50%</td><td>$0</td><td>Break even. Money management protects capital.</td></tr>
+                <tr><td><strong style="color:var(--yellow)">Bad day</strong></td><td>45%</td><td style="color:var(--red)">-$4</td><td>Stop-loss halts agent automatically.</td></tr>
+                <tr><td><strong style="color:var(--red)">Worst case</strong></td><td>&lt;40%</td><td style="color:var(--red)">-$10 max</td><td>Hard stop at -10%. You keep $90.</td></tr>
             </tbody>
         </table>
     </div>
 </section>
 
-<!-- DISCLAIMER -->
-<div class="disclaimer-section">
-    <div class="disclaimer-inner">
-        <h3>⚠️ Important Disclosure</h3>
-        <p>
-            This is a hackathon MVP running on testnet. The signal engine's win rate is an <strong>untested hypothesis</strong>.
-            We do not guarantee profits. The core value is automated risk management, not profit generation.
-            Prediction markets carry significant risk. Never use funds you cannot afford to lose.
-        </p>
+<!-- PRICING -->
+<section id="pricing" class="pricing-section">
+    <div class="container">
+        <div class="s-label">// Pricing</div>
+        <h2 class="s-title">Start free. Upgrade when ready.</h2>
+        <p class="s-desc">No credit card. No lock-in. Cancel anytime.</p>
+        <div class="pricing-grid">
+            <div class="price-card" data-a><div class="price-tier">Free</div><div class="price-amount">$0</div><div class="price-desc">Try risk-free</div><ul class="price-features"><li>BTC 15-min market</li><li>Safe Mode</li><li>10 rounds/day</li><li>$100 bankroll</li><li>Basic dashboard</li><li class="disabled">Telegram</li><li class="disabled">Backtesting</li></ul><a href="https://prediction-market-autopilot.vercel.app" class="price-btn price-btn-outline">Start Free →</a><div class="price-perf">No performance fee</div></div>
+            <div class="price-card popular" data-a><span class="popular-badge">MOST POPULAR</span><div class="price-tier">Pro</div><div class="price-amount">$9.99<span>/mo</span></div><div class="price-desc">For active users</div><ul class="price-features"><li>All markets (BTC, ETH, SOL)</li><li>3 strategy modes</li><li>Unlimited rounds</li><li>$5k bankroll</li><li>Full analytics</li><li>Telegram alerts</li><li>Backtesting 30d</li></ul><a href="https://prediction-market-autopilot.vercel.app" class="price-btn price-btn-green">Go Pro →</a><div class="price-perf">15% perf fee on profit</div></div>
+            <div class="price-card" data-a><div class="price-tier">Trader</div><div class="price-amount">$29.99<span>/mo</span></div><div class="price-desc">Full control</div><ul class="price-features"><li>All markets</li><li>Custom strategy</li><li>Unlimited rounds</li><li>$50k bankroll</li><li>Copy top wallets</li><li>Telegram + commands</li><li>Backtesting 90d</li></ul><a href="https://prediction-market-autopilot.vercel.app" class="price-btn price-btn-outline">Start Trading →</a><div class="price-perf">10% perf fee</div></div>
+            <div class="price-card" data-a><div class="price-tier">Quant</div><div class="price-amount">$99<span>/mo</span></div><div class="price-desc">For developers</div><ul class="price-features"><li>Everything in Trader</li><li>REST API + WebSocket</li><li>Custom signals</li><li>$500k bankroll</li><li>Priority infra</li><li>Webhooks</li><li>Unlimited backtest</li></ul><a href="https://prediction-market-autopilot.vercel.app" class="price-btn price-btn-outline">Contact Us →</a><div class="price-perf">5% perf fee</div></div>
+        </div>
     </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq">
+    <div class="container">
+        <div class="s-label">// FAQ</div>
+        <h2 class="s-title">Honest answers to hard questions.</h2>
+        <div class="faq-grid" style="margin-top:2rem">
+            <div class="faq-item" data-a><h3>Does this guarantee profit?</h3><p>No. The signal engine is an untested hypothesis. We promise disciplined risk management, not returns. Even at 50% win rate, your account is protected from blowups.</p></div>
+            <div class="faq-item" data-a><h3>How much to start?</h3><p>$50 minimum on free tier. Agent bets 2% per round ($1 on $50). Scale up as you get comfortable.</p></div>
+            <div class="faq-item" data-a><h3>Is my money safe?</h3><p>Funds stay on Polygon, not in our database. Withdraw to your wallet anytime. We never custody your keys.</p></div>
+            <div class="faq-item" data-a><h3>How is this different from gambling?</h3><p>Agent SKIPS when signals are weak. Fixed 2% bet size. Hard stop-losses by code. Gamblers do none of these.</p></div>
+            <div class="faq-item" data-a><h3>Can I cancel anytime?</h3><p>Yes. No lock-in, no contracts. Stop and withdraw whenever. Free tier never expires.</p></div>
+            <div class="faq-item" data-a><h3>What's the performance fee?</h3><p>Percentage of realized profit only. Zero profit = zero fee. We only earn when you earn.</p></div>
+        </div>
+    </div>
+</section>
+
+<!-- TRUST -->
+<div class="trust-section">
+    <div class="container"><div class="trust-grid">
+        <div class="trust-item"><span style="font-size:1.2rem">⟠</span> Polygon</div>
+        <div class="trust-item"><span style="font-size:1.2rem">📊</span> Binance Data</div>
+        <div class="trust-item"><span style="font-size:1.2rem">🔮</span> Polymarket</div>
+        <div class="trust-item"><span style="font-size:1.2rem">🔑</span> Alchemy</div>
+        <div class="trust-item"><span style="font-size:1.2rem">🦊</span> MetaMask</div>
+        <div class="trust-item"><span style="font-size:1.2rem">🤖</span> Claude AI</div>
+    </div></div>
 </div>
 
+<!-- DISCLAIMER -->
+<div class="disclaimer"><div class="disclaimer-inner container"><h3>⚠️ Important Disclosure</h3><p>Testnet beta. Signal engine win rate is untested. No profit guarantee. Prediction markets carry significant risk. Only use funds you can afford to lose.</p></div></div>
+
 <!-- CTA -->
-<section class="cta-section">
+<section class="cta">
     <div class="cta-glow"></div>
-    <h2>Stop betting with emotion.<br>Start betting with <span class="gradient-text">discipline.</span></h2>
-    <p>Open source. Transparent. Honest about what we know and don't know.</p>
-    <div class="hero-actions" style="position:relative;z-index:2;">
-        <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="btn-primary">
-            ⚡ View on GitHub
-        </a>
-        <a href="https://github.com/percytran234/prediction-market-autopilot/blob/main/README.md" target="_blank" class="btn-secondary">
-            📄 Read Full Spec
-        </a>
+    <div class="container">
+        <h2>Stop losing to emotions.<br>Start trading with <em style="color:var(--green);font-style:normal">discipline.</em></h2>
+        <p>Free tier. No credit card. Cancel anytime.</p>
+        <div class="hero-actions" style="position:relative;z-index:2">
+            <a href="https://prediction-market-autopilot.vercel.app" target="_blank" class="btn-big btn-big-green">Start Free Now</a>
+            <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="btn-big btn-big-outline">View Source Code</a>
+        </div>
     </div>
 </section>
 
 <!-- FOOTER -->
-<footer>
-    <div class="footer-inner">
-        <div class="footer-links">
-            <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank">GitHub</a>
-            <a href="#problem">Problem</a>
-            <a href="#how">How It Works</a>
-            <a href="#strategy">Strategy</a>
-            <a href="#scenarios">Scenarios</a>
-        </div>
-        <p class="footer-copy">
-            Built by Tran Thanh Binh — Cook Your MVP Hackathon 2025<br>
-            Past results do not predict future performance. Testnet demo only.
-        </p>
-    </div>
-</footer>
+<footer><div class="container"><div class="footer-inner">
+    <div class="footer-links"><a href="#features">Features</a><a href="#how">How It Works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank">GitHub</a></div>
+    <div class="footer-copy">© 2025 Prediction Agent · Tran Thanh Binh · Not financial advice · Testnet only</div>
+</div></div></footer>
 
-<!-- SCROLL ANIMATIONS -->
 <script>
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry, i) => {
-            if (entry.isIntersecting) {
-                setTimeout(() => {
-                    entry.target.classList.add('visible');
-                }, i * 100);
-                observer.unobserve(entry.target);
+// Scroll-triggered animations with stagger
+const obs = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+            // Stagger children if it's a parent container
+            const children = entry.target.querySelectorAll('[data-a]');
+            if (children.length > 0) {
+                children.forEach((child, i) => {
+                    setTimeout(() => child.classList.add('v'), i * 120);
+                });
             }
-        });
-    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-
-    document.querySelectorAll('[data-animate]').forEach(el => observer.observe(el));
-
-    // Smooth nav background on scroll
-    window.addEventListener('scroll', () => {
-        const nav = document.querySelector('nav');
-        if (window.scrollY > 50) {
-            nav.style.borderBottomColor = 'var(--border-glow)';
-        } else {
-            nav.style.borderBottomColor = 'var(--border)';
+            entry.target.classList.add('v');
+            obs.unobserve(entry.target);
         }
     });
+}, { threshold: 0.1, rootMargin: '0px 0px -60px 0px' });
+
+document.querySelectorAll('[data-a]').forEach(el => obs.observe(el));
+
+// Animate meter fills on scroll
+const meterObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const meters = entry.target.querySelectorAll('.meter-anim');
+            meters.forEach((m, i) => {
+                setTimeout(() => { m.style.width = m.dataset.w; }, i * 200 + 300);
+            });
+            meterObs.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('.vis-card').forEach(el => meterObs.observe(el));
+
+// Donut animation
+const donutObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.querySelectorAll('.donut-fill').forEach(d => {
+                d.style.strokeDashoffset = '117';
+            });
+            donutObs.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('.donut-fill').forEach(el => {
+    const parent = el.closest('.vis-card');
+    if (parent) donutObs.observe(parent);
+});
+
+// Smooth parallax on feature visuals
+window.addEventListener('scroll', () => {
+    const visuals = document.querySelectorAll('.feature-visual');
+    visuals.forEach(v => {
+        const rect = v.getBoundingClientRect();
+        const center = rect.top + rect.height / 2;
+        const viewCenter = window.innerHeight / 2;
+        const offset = (center - viewCenter) * 0.04;
+        v.style.transform = `translateY(${offset}px)`;
+    });
+});
 </script>
 
 </body>
