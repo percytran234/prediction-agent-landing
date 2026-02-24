@@ -1,0 +1,994 @@
+[index.html](https://github.com/user-attachments/files/25514004/index.html)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Agent — Discipline-as-a-Service for Prediction Markets</title>
+    <meta name="description" content="AI-powered prediction market agent with automated risk management. Don't predict better — manage better.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #06070a;
+            --bg-secondary: #0c0e14;
+            --bg-card: #11131a;
+            --bg-card-hover: #161921;
+            --border: #1a1d28;
+            --border-glow: #2a3040;
+            --text-primary: #e8ecf4;
+            --text-secondary: #7a8299;
+            --text-muted: #4a5068;
+            --accent-green: #00e68a;
+            --accent-green-dim: #00e68a33;
+            --accent-red: #ff4d6a;
+            --accent-red-dim: #ff4d6a22;
+            --accent-blue: #4d9fff;
+            --accent-blue-dim: #4d9fff22;
+            --accent-yellow: #ffd84d;
+            --accent-yellow-dim: #ffd84d22;
+            --accent-purple: #a78bfa;
+            --gradient-green: linear-gradient(135deg, #00e68a, #00b368);
+            --gradient-hero: linear-gradient(180deg, #06070a 0%, #0a0f18 50%, #06070a 100%);
+            --font-display: 'Outfit', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) var(--bg-primary);
+        }
+
+        body {
+            font-family: var(--font-display);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ===== NOISE TEXTURE OVERLAY ===== */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        /* ===== GRID BACKGROUND ===== */
+        .grid-bg {
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 60px 60px;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        /* ===== NAVIGATION ===== */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+            padding: 1rem 2rem;
+            backdrop-filter: blur(20px);
+            background: rgba(6,7,10,0.8);
+            border-bottom: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 700;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-green);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 400;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: var(--text-primary); }
+
+        .nav-cta {
+            padding: 0.5rem 1.25rem;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--accent-green-dim);
+        }
+
+        /* ===== HERO ===== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 8rem 2rem 4rem;
+            background: var(--gradient-hero);
+        }
+
+        .hero-glow {
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-green-dim) 0%, transparent 70%);
+            pointer-events: none;
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.3; transform: translateX(-50%) scale(1); }
+            50% { opacity: 0.6; transform: translateX(-50%) scale(1.1); }
+        }
+
+        .hero-content {
+            text-align: center;
+            max-width: 800px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            color: var(--accent-green);
+            font-family: var(--font-mono);
+            margin-bottom: 2rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: blink 2s ease-in-out infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -0.03em;
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .hero h1 .gradient-text {
+            background: var(--gradient-green);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2.5rem;
+            font-weight: 300;
+            line-height: 1.7;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease-out 0.6s both;
+        }
+
+        .btn-primary {
+            padding: 0.85rem 2rem;
+            background: var(--accent-green);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.25s;
+            font-family: var(--font-display);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px var(--accent-green-dim);
+        }
+
+        .btn-secondary {
+            padding: 0.85rem 2rem;
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.25s;
+            font-family: var(--font-display);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-secondary);
+            background: var(--bg-card);
+        }
+
+        /* ===== LIVE TICKER ===== */
+        .ticker-section {
+            padding: 2rem 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            overflow: hidden;
+            background: var(--bg-secondary);
+        }
+
+        .ticker-track {
+            display: flex;
+            gap: 3rem;
+            animation: scroll-left 30s linear infinite;
+            width: max-content;
+        }
+
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            white-space: nowrap;
+            color: var(--text-secondary);
+        }
+
+        .ticker-item .green { color: var(--accent-green); }
+        .ticker-item .red { color: var(--accent-red); }
+        .ticker-item .yellow { color: var(--accent-yellow); }
+
+        @keyframes scroll-left {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* ===== SECTIONS COMMON ===== */
+        section {
+            padding: 6rem 2rem;
+            position: relative;
+        }
+
+        .section-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent-green);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+            line-height: 1.15;
+        }
+
+        .section-desc {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 3rem;
+            font-weight: 300;
+        }
+
+        /* ===== PROBLEM SECTION ===== */
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .problem-card {
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            transition: all 0.3s;
+            opacity: 0;
+            transform: translateY(30px);
+        }
+
+        .problem-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .problem-card:hover {
+            border-color: var(--accent-red);
+            background: var(--bg-card-hover);
+            transform: translateY(-4px);
+        }
+
+        .problem-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .problem-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .problem-card p {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .problem-stat {
+            display: inline-block;
+            margin-top: 1rem;
+            padding: 0.3rem 0.75rem;
+            background: var(--accent-red-dim);
+            color: var(--accent-red);
+            border-radius: 6px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* ===== HOW IT WORKS ===== */
+        .steps-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+        }
+
+        .steps-container::before {
+            content: '';
+            position: absolute;
+            left: 24px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, var(--accent-green), var(--accent-blue), var(--accent-purple));
+            opacity: 0.3;
+        }
+
+        .step {
+            display: flex;
+            gap: 2rem;
+            padding: 2rem 0;
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: all 0.6s ease-out;
+        }
+
+        .step.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            min-width: 50px;
+            background: var(--bg-card);
+            border: 2px solid var(--accent-green);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--accent-green);
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-content h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-content p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .step-code {
+            margin-top: 1rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--accent-green);
+            overflow-x: auto;
+        }
+
+        /* ===== STRATEGY SECTION ===== */
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .strategy-card {
+            padding: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            text-align: center;
+            transition: all 0.3s;
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        .strategy-card.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .strategy-card:hover {
+            border-color: var(--accent-green);
+            transform: translateY(-4px);
+        }
+
+        .strategy-number {
+            font-family: var(--font-mono);
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            line-height: 1;
+            margin-bottom: 0.75rem;
+        }
+
+        .strategy-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .strategy-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* ===== SCENARIOS ===== */
+        .scenario-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+            font-size: 0.9rem;
+        }
+
+        .scenario-table th {
+            text-align: left;
+            padding: 1rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .scenario-table td {
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--border);
+            background: var(--bg-secondary);
+        }
+
+        .scenario-table tr:hover td {
+            background: var(--bg-card);
+        }
+
+        /* ===== DISCLAIMER BANNER ===== */
+        .disclaimer-section {
+            padding: 3rem 2rem;
+            background: var(--accent-yellow-dim);
+            border-top: 1px solid rgba(255,216,77,0.15);
+            border-bottom: 1px solid rgba(255,216,77,0.15);
+        }
+
+        .disclaimer-inner {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .disclaimer-inner h3 {
+            color: var(--accent-yellow);
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            font-family: var(--font-mono);
+        }
+
+        .disclaimer-inner p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        /* ===== CTA SECTION ===== */
+        .cta-section {
+            padding: 8rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .cta-glow {
+            position: absolute;
+            bottom: 20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--accent-green-dim) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .cta-section h2 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        .cta-section p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 2.5rem;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ===== FOOTER ===== */
+        footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .footer-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover { color: var(--text-primary); }
+
+        .footer-copy {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .strategy-grid { grid-template-columns: 1fr; }
+            .problem-grid { grid-template-columns: 1fr; }
+            .hero { padding: 6rem 1.5rem 3rem; }
+            section { padding: 4rem 1.5rem; }
+            .step { gap: 1rem; }
+            .scenario-table { font-size: 0.8rem; }
+            .scenario-table th, .scenario-table td { padding: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- NAV -->
+<nav>
+    <div class="nav-inner">
+        <div class="logo">
+            <div class="logo-icon">🤖</div>
+            <span>Prediction Agent</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#problem">Problem</a></li>
+            <li><a href="#how">How It Works</a></li>
+            <li><a href="#strategy">Strategy</a></li>
+            <li><a href="#scenarios">Scenarios</a></li>
+        </ul>
+        <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="nav-cta">View on GitHub →</a>
+    </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Agent Wallet — Polymarket × Polygon
+        </div>
+        <h1>Don't predict better.<br><span class="gradient-text">Manage better.</span></h1>
+        <p class="hero-subtitle">
+            An AI agent that replaces human emotion with code-enforced discipline.
+            Automated bet sizing, signal filtering, and hard stop-losses for Polymarket's BTC prediction markets.
+        </p>
+        <div class="hero-actions">
+            <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="btn-primary">
+                ⚡ Launch App
+            </a>
+            <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="btn-secondary">
+                📄 Read Spec
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker-section">
+    <div class="ticker-track">
+        <div class="ticker-item">🟢 BET UP <span class="green">+$2.04</span> — RSI oversold + EMA bullish</div>
+        <div class="ticker-item">⚪ SKIP — Confidence 48%</div>
+        <div class="ticker-item">🔴 BET DOWN <span class="red">-$1.98</span> — Overbought reversal</div>
+        <div class="ticker-item">🟢 BET UP <span class="green">+$2.12</span> — Volume spike + momentum</div>
+        <div class="ticker-item">⚪ SKIP — Confidence 52%</div>
+        <div class="ticker-item">🟢 BET DOWN <span class="green">+$2.06</span> — RSI 74 + EMA bearish</div>
+        <div class="ticker-item"><span class="yellow">⏸️ PAUSED</span> — Daily profit target +5% reached</div>
+        <div class="ticker-item">🟢 BET UP <span class="green">+$2.04</span> — RSI oversold + EMA bullish</div>
+        <div class="ticker-item">⚪ SKIP — Confidence 48%</div>
+        <div class="ticker-item">🔴 BET DOWN <span class="red">-$1.98</span> — Overbought reversal</div>
+        <div class="ticker-item">🟢 BET UP <span class="green">+$2.12</span> — Volume spike + momentum</div>
+        <div class="ticker-item">⚪ SKIP — Confidence 52%</div>
+        <div class="ticker-item">🟢 BET DOWN <span class="green">+$2.06</span> — RSI 74 + EMA bearish</div>
+        <div class="ticker-item"><span class="yellow">⏸️ PAUSED</span> — Daily profit target +5% reached</div>
+    </div>
+</div>
+
+<!-- PROBLEM -->
+<section id="problem">
+    <div class="section-inner">
+        <div class="section-label">// The Problem</div>
+        <h2 class="section-title">Prediction markets are booming.<br>Retail users are bleeding.</h2>
+        <p class="section-desc">
+            Polymarket hit $1B+ monthly volume. New users flood in, drawn by the simplicity of "up or down?" But they lose — not because they're stupid, because they're human.
+        </p>
+        <div class="problem-grid">
+            <div class="problem-card" data-animate>
+                <div class="problem-icon">🎲</div>
+                <h3>Random Guessing</h3>
+                <p>No signals, no analysis. Users guess UP or DOWN based on gut feeling.</p>
+                <span class="problem-stat">50% odds at best</span>
+            </div>
+            <div class="problem-card" data-animate>
+                <div class="problem-icon">💸</div>
+                <h3>No Bankroll Management</h3>
+                <p>FOMO all-in on one round. One bad bet wipes out the entire account.</p>
+                <span class="problem-stat">100% loss risk</span>
+            </div>
+            <div class="problem-card" data-animate>
+                <div class="problem-icon">😤</div>
+                <h3>Emotional Trading</h3>
+                <p>Winners get greedy. Losers chase losses. Both paths lead to ruin.</p>
+                <span class="problem-stat">76% of retail lose</span>
+            </div>
+            <div class="problem-card" data-animate>
+                <div class="problem-icon">⏰</div>
+                <h3>Manual Execution</h3>
+                <p>Every 15 minutes: open app, choose, confirm. Fatigue leads to worse decisions.</p>
+                <span class="problem-stat">40 rounds/day</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" style="background: var(--bg-secondary);">
+    <div class="section-inner">
+        <div class="section-label">// How It Works</div>
+        <h2 class="section-title">One button. Zero emotion.<br>Full risk control.</h2>
+        <p class="section-desc">
+            The agent handles everything. You just watch the dashboard.
+        </p>
+        <div class="steps-container">
+            <div class="step" data-animate>
+                <div class="step-number">01</div>
+                <div class="step-content">
+                    <h3>Connect & Deposit</h3>
+                    <p>Connect your MetaMask wallet on Polygon. Deposit USDC into the agent's dedicated wallet. Your funds, your control.</p>
+                </div>
+            </div>
+            <div class="step" data-animate>
+                <div class="step-number">02</div>
+                <div class="step-content">
+                    <h3>Select Safe Mode</h3>
+                    <p>Pre-configured risk parameters. 2% bet size, -10% daily stop-loss, +5% profit target. One click to start.</p>
+                    <div class="step-code">
+                        { betSize: "2%", dailyLoss: "-10%", dailyProfit: "+5%", skipThreshold: "60%" }
+                    </div>
+                </div>
+            </div>
+            <div class="step" data-animate>
+                <div class="step-number">03</div>
+                <div class="step-content">
+                    <h3>Agent Analyzes & Acts</h3>
+                    <p>Every round: fetch BTC data → compute EMA + RSI + Volume signals → bet UP/DOWN if confident, SKIP if not. No human intervention.</p>
+                    <div class="step-code">
+                        Signal: EMA(5) > EMA(15) + RSI 28 (oversold) → Confidence 72% → BET UP $2.04
+                    </div>
+                </div>
+            </div>
+            <div class="step" data-animate>
+                <div class="step-number">04</div>
+                <div class="step-content">
+                    <h3>Auto-Stop Protects You</h3>
+                    <p>Hit daily loss limit? Agent stops. Hit profit target? Agent stops. 4 losses in a row? Agent pauses. Code doesn't have emotions.</p>
+                </div>
+            </div>
+            <div class="step" data-animate>
+                <div class="step-number">05</div>
+                <div class="step-content">
+                    <h3>Withdraw Anytime</h3>
+                    <p>Your funds, your decision. Stop the agent and withdraw to your personal wallet whenever you want.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- STRATEGY -->
+<section id="strategy">
+    <div class="section-inner">
+        <div class="section-label">// Three Layers of Protection</div>
+        <h2 class="section-title">The edge isn't prediction.<br>It's discipline.</h2>
+        <p class="section-desc">
+            Whether the signal engine hits 51% or 55%, these three layers protect your capital.
+        </p>
+        <div class="strategy-grid">
+            <div class="strategy-card" data-animate>
+                <div class="strategy-number">2%</div>
+                <h3>Fixed Bet Size</h3>
+                <p>Every round: exactly 2% of bankroll. One loss = $2 on $100. Even 10 consecutive losses only costs 20%. No account blowup.</p>
+            </div>
+            <div class="strategy-card" data-animate>
+                <div class="strategy-number">60%</div>
+                <h3>Skip Threshold</h3>
+                <p>Agent only bets when confidence ≥ 60%. Below that? SKIP. Skipping 40-50% of rounds is correct. Not betting = not losing.</p>
+            </div>
+            <div class="strategy-card" data-animate>
+                <div class="strategy-number">-10%</div>
+                <h3>Hard Stop-Loss</h3>
+                <p>Daily loss limit: -10%. Consecutive losses: 4 → pause 1h. Profit target: +5% → lock gains. All enforced by code, not willpower.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SCENARIOS -->
+<section id="scenarios" style="background: var(--bg-secondary);">
+    <div class="section-inner">
+        <div class="section-label">// Honest Numbers</div>
+        <h2 class="section-title">We show you every scenario.<br>Including the bad ones.</h2>
+        <p class="section-desc">
+            $100 bankroll. $2/round (2%). ~20 rounds/day. Here's what happens:
+        </p>
+        <table class="scenario-table">
+            <thead>
+                <tr>
+                    <th>Scenario</th>
+                    <th>Win Rate</th>
+                    <th>Daily P&L</th>
+                    <th>What Happens</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong style="color:var(--accent-green)">Signal works</strong></td>
+                    <td>55%</td>
+                    <td style="color:var(--accent-green)">+$4 (+4%)</td>
+                    <td>Optimistic case. Unproven until backtested.</td>
+                </tr>
+                <tr>
+                    <td><strong style="color:var(--accent-blue)">Random</strong></td>
+                    <td>50%</td>
+                    <td style="color:var(--text-secondary)">$0 (break even)</td>
+                    <td>Money management protects capital.</td>
+                </tr>
+                <tr>
+                    <td><strong style="color:var(--accent-yellow)">Bad day</strong></td>
+                    <td>45%</td>
+                    <td style="color:var(--accent-red)">-$4</td>
+                    <td>Daily loss limit stops the agent.</td>
+                </tr>
+                <tr>
+                    <td><strong style="color:var(--accent-red)">Worst case</strong></td>
+                    <td><40%</td>
+                    <td style="color:var(--accent-red)">-$10 max</td>
+                    <td>-10% hard stop. Agent refuses to continue. You keep $90.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- DISCLAIMER -->
+<div class="disclaimer-section">
+    <div class="disclaimer-inner">
+        <h3>⚠️ Important Disclosure</h3>
+        <p>
+            This is a hackathon MVP running on testnet. The signal engine's win rate is an <strong>untested hypothesis</strong>.
+            We do not guarantee profits. The core value is automated risk management, not profit generation.
+            Prediction markets carry significant risk. Never use funds you cannot afford to lose.
+        </p>
+    </div>
+</div>
+
+<!-- CTA -->
+<section class="cta-section">
+    <div class="cta-glow"></div>
+    <h2>Stop betting with emotion.<br>Start betting with <span class="gradient-text">discipline.</span></h2>
+    <p>Open source. Transparent. Honest about what we know and don't know.</p>
+    <div class="hero-actions" style="position:relative;z-index:2;">
+        <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank" class="btn-primary">
+            ⚡ View on GitHub
+        </a>
+        <a href="https://github.com/percytran234/prediction-market-autopilot/blob/main/README.md" target="_blank" class="btn-secondary">
+            📄 Read Full Spec
+        </a>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-inner">
+        <div class="footer-links">
+            <a href="https://github.com/percytran234/prediction-market-autopilot" target="_blank">GitHub</a>
+            <a href="#problem">Problem</a>
+            <a href="#how">How It Works</a>
+            <a href="#strategy">Strategy</a>
+            <a href="#scenarios">Scenarios</a>
+        </div>
+        <p class="footer-copy">
+            Built by Tran Thanh Binh — Cook Your MVP Hackathon 2025<br>
+            Past results do not predict future performance. Testnet demo only.
+        </p>
+    </div>
+</footer>
+
+<!-- SCROLL ANIMATIONS -->
+<script>
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry, i) => {
+            if (entry.isIntersecting) {
+                setTimeout(() => {
+                    entry.target.classList.add('visible');
+                }, i * 100);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('[data-animate]').forEach(el => observer.observe(el));
+
+    // Smooth nav background on scroll
+    window.addEventListener('scroll', () => {
+        const nav = document.querySelector('nav');
+        if (window.scrollY > 50) {
+            nav.style.borderBottomColor = 'var(--border-glow)';
+        } else {
+            nav.style.borderBottomColor = 'var(--border)';
+        }
+    });
+</script>
+
+</body>
+</html>
